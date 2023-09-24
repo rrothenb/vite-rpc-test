@@ -7,30 +7,25 @@ import {simple} from 'acorn-walk'
 
 // https://vitejs.dev/config/
 
-let middlewares
+const serverRoutes = {}
 
 const rpcTest = async () => {
   return {
     name: 'rpc test',
-    enforce: 'post',
     transform: async function (code, id) {
-      if (id.includes('/server/') && middlewares) {
-
+      if (id.includes('/server/')) {
         const urlPath = id.replace(/^.*server/, '').replace(/\.ts$/, '')
         const importPath = `./floob${urlPath}.js`
-        console.log({importPath, urlPath, id, code})
+        console.log({importPath, urlPath, id})
         const ast = this.parse(code)
         const module = await import(importPath)
         const exportedAsyncFunctions = Object.keys(module).filter((endpoint) => module[endpoint].constructor.name === 'AsyncFunction')
         console.log({exportedAsyncFunctions})
-        Object.keys(module).map((endpoint) => console.log(
-            'export',
-            endpoint,
-            typeof module[endpoint],
-            module[endpoint].constructor.name,
-            module[endpoint].name,
-            module[endpoint].length,
-            module[endpoint].toString()))
+        for (const i in exportedAsyncFunctions) {
+          const exportedFunc = exportedAsyncFunctions[i]
+          serverRoutes[`${urlPath}/${exportedFunc}`] = module[exportedFunc]
+        }
+        console.log(serverRoutes)
         ast.body = ast.body.filter(statement => {
           if (statement.type === 'ExportNamedDeclaration') {
             if (statement.declaration.type === 'VariableDeclaration') {
@@ -43,12 +38,9 @@ const rpcTest = async () => {
           }
           return false
         })
-        console.log(JSON.stringify(ast, null, '    '))
         const body = this.parse("return 'goodbye'", {allowReturnOutsideFunction: true}).body
-        console.log(body)
         simple(ast, {
           ArrowFunctionExpression(node) {
-            console.log('ArrowFunctionExpression', node.body, body)
             if (node.body.type === 'BlockStatement') {
               node.body.body = body
             } else if (node.body.type === 'Literal') {
@@ -57,22 +49,36 @@ const rpcTest = async () => {
             }
           },
           FunctionDeclaration(node) {
-            console.log('FunctionDeclaration', node.body, body)
             node.body.body = body
           }
         })
 
-        const newCode = generate(ast).replace(/ async /, ' ')
+        const newCode = generate(ast).replace(/ async /g, ' ')
         console.log('--- newCode ---')
         console.log(newCode)
         return newCode
       }
     },
     configureServer: function(server) {
-      middlewares = server.middlewares
+      server.middlewares.use('/server', function (req, res) {
+        console.log('server hit', req.url, req.method)
+        if (serverRoutes[req.url]) {
+          const body = [];
+          req
+              .on('data', chunk => {
+                body.push(chunk);
+              })
+              .on('end', async () => {
+                const payload = JSON.parse(Buffer.concat(body).toString());
+                console.log(payload)
+                const result = JSON.stringify(await serverRoutes[req.url](...payload))
+                console.log(result)
+                res.end(result)
+              });
+        }
+      })
     },
-    buildStart: function(options) {
-      console.log({options})
+    buildStart: function() {
       const program = ts.createProgram(["src/server/util.ts", "src/server/blech.ts"], {
         outDir: 'floob',
         moduleResolution: ts.ModuleResolutionKind.Node10,
