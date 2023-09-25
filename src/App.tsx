@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import {useEffect, useState} from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
@@ -6,6 +6,13 @@ import {secret} from "./server/util";
 
 function App() {
   const [count, setCount] = useState(0)
+  const [value, setValue] = useState('')
+
+    useEffect(() => {
+        (async () => {
+            setValue(await secret('howdy'))
+        })();
+    })
 
   return (
     <>
@@ -21,8 +28,10 @@ function App() {
       <div className="card">
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
-            {secret('test')}
         </button>
+        <p>
+            secret is {value}
+        </p>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
