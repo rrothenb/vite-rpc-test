@@ -19,7 +19,7 @@ const rpcTest = async () => {
     transform: async function (code, id) {
       if (id.includes('/server/')) {
         const urlPath = id.replace(/^.*server/, '').replace(/\.ts$/, '')
-        const importPath = `./floob${urlPath}.js`
+        const importPath = `./.rpc/build${urlPath}.js`
         console.log({importPath, urlPath, id})
         const ast = this.parse(code)
         const module = await import(importPath)
@@ -78,7 +78,7 @@ const rpcTest = async () => {
     },
     buildStart: function() {
       const program = ts.createProgram(["src/server/util.ts", "src/server/blech.ts"], {
-        outDir: 'floob',
+        outDir: '.rpc/build',
         moduleResolution: ts.ModuleResolutionKind.Node10,
         target: ts.ScriptTarget.ESNext,
         module: ts.ModuleKind.CommonJS,
