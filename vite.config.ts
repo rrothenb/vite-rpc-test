@@ -77,7 +77,7 @@ const rpcTest = async () => {
       })
     },
     buildStart: function() {
-      const program = ts.createProgram(["src/server/util.ts", "src/server/blech.ts"], {
+      const program = ts.createProgram(["src/server/util.ts", "src/server/other.ts"], {
         outDir: '.rpc/build',
         moduleResolution: ts.ModuleResolutionKind.Node10,
         target: ts.ScriptTarget.ESNext,

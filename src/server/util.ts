@@ -1,9 +1,9 @@
-import {something} from "./blech";
+import {something} from "./other";
 
 export const secret = async (message: string): Promise<string> => {
     console.log({message})
     something()
-    return 'hello'
+    return `${message}!`
 }
 
 export const noise = async (): Promise<string> => "hello"
