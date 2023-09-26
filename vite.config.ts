@@ -83,7 +83,8 @@ const rpcTest = async () => {
         target: ts.ScriptTarget.ESNext,
         module: ts.ModuleKind.CommonJS,
         allowJs: true,
-        esModuleInterop: true
+        esModuleInterop: true,
+        sourceMap: true
       })
       const emitResult = program.emit();
       const allDiagnostics = ts
