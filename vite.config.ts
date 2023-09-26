@@ -7,8 +7,11 @@ import {simple} from 'acorn-walk'
 
 const serverRoutes = {}
 
-const buildExpressionAst = (expression, parse) => {
-  return parse(`{return ${expression}}`, {allowReturnOutsideFunction: true}).body[0]
+const buildExpressionAst = (name, basePath, serverRoutes, parse) => {
+  const fullPath = `${basePath}/${name}`
+  const func = serverRoutes[fullPath]
+  const parms = func.toString().replace(/\n/g, ' ').replace(/^[^(]*\(/, '').replace(/\).*$/, '')
+  return parse(`{return '${fullPath} - JSON.stringify([${parms}])'}`, {allowReturnOutsideFunction: true}).body[0]
 }
 
 const rpcTest = async () => {
@@ -42,10 +45,10 @@ const rpcTest = async () => {
         simple(ast, {
           VariableDeclarator(node) {
             node.init.expression = false
-            node.init.body = buildExpressionAst(`'${node.id.name}'`, parse)
+            node.init.body = buildExpressionAst(node.id.name, urlPath, serverRoutes, parse)
           },
           FunctionDeclaration(node) {
-            node.body = buildExpressionAst(`'${node.id.name}'`, parse)
+            node.body = buildExpressionAst(node.id.name, urlPath, serverRoutes, parse)
           }
         })
 
