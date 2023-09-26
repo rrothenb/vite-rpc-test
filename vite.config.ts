@@ -9,6 +9,10 @@ import {simple} from 'acorn-walk'
 
 const serverRoutes = {}
 
+const buildExpressionAst = (expression, parse) => {
+  return parse(`{return ${expression}}`, {allowReturnOutsideFunction: true}).body[0]
+}
+
 const rpcTest = async () => {
   return {
     name: 'rpc test',
@@ -21,10 +25,9 @@ const rpcTest = async () => {
         const module = await import(importPath)
         const exportedAsyncFunctions = Object.keys(module).filter((endpoint) => module[endpoint].constructor.name === 'AsyncFunction')
         console.log({exportedAsyncFunctions})
-        for (const i in exportedAsyncFunctions) {
-          const exportedFunc = exportedAsyncFunctions[i]
+        exportedAsyncFunctions.forEach(exportedFunc => {
           serverRoutes[`${urlPath}/${exportedFunc}`] = module[exportedFunc]
-        }
+        })
         console.log(serverRoutes)
         ast.body = ast.body.filter(statement => {
           if (statement.type === 'ExportNamedDeclaration') {
@@ -38,23 +41,18 @@ const rpcTest = async () => {
           }
           return false
         })
-        const body = this.parse("return 'goodbye'", {allowReturnOutsideFunction: true}).body
+        const parse = this.parse
         simple(ast, {
-          ArrowFunctionExpression(node) {
-            if (node.body.type === 'BlockStatement') {
-              node.body.body = body
-            } else if (node.body.type === 'Literal') {
-              node.body.value = 'goodbye'
-              node.body.raw = "'goodbye'"
-            }
+          VariableDeclarator(node) {
+            node.init.expression = false
+            node.init.body = buildExpressionAst(`'${node.id.name}'`, parse)
           },
           FunctionDeclaration(node) {
-            node.body.body = body
+            node.body = buildExpressionAst(`'${node.id.name}'`, parse)
           }
         })
 
         const newCode = generate(ast).replace(/ async /g, ' ')
-        console.log('--- newCode ---')
         console.log(newCode)
         return newCode
       }
