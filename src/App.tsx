@@ -12,7 +12,7 @@ function App() {
         (async () => {
             setValue(await secret('howdy'))
         })();
-    })
+    }, [value])
 
   return (
     <>
