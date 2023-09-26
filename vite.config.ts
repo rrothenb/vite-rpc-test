@@ -5,8 +5,6 @@ import ts from "typescript"
 import { generate } from 'astring'
 import {simple} from 'acorn-walk'
 
-// https://vitejs.dev/config/
-
 const serverRoutes = {}
 
 const buildExpressionAst = (expression, parse) => {
@@ -24,7 +22,6 @@ const rpcTest = async () => {
         const ast = this.parse(code)
         const module = await import(importPath)
         const exportedAsyncFunctions = Object.keys(module).filter((endpoint) => module[endpoint].constructor.name === 'AsyncFunction')
-        console.log({exportedAsyncFunctions})
         exportedAsyncFunctions.forEach(exportedFunc => {
           serverRoutes[`${urlPath}/${exportedFunc}`] = module[exportedFunc]
         })
