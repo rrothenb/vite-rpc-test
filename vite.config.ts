@@ -11,7 +11,7 @@ const buildExpressionAst = (name, basePath, serverRoutes, parse) => {
   const fullPath = `${basePath}/${name}`
   const func = serverRoutes[fullPath]
   const parms = func.toString().replace(/\n/g, ' ').replace(/^[^(]*\(/, '').replace(/\).*$/, '')
-  return parse(`{return '${fullPath} - JSON.stringify([${parms}])'}`, {allowReturnOutsideFunction: true}).body[0]
+  return parse(`{return (await fetch('/server${fullPath}', {method: 'POST', body:  JSON.stringify([${parms}])})).json()}`, {allowReturnOutsideFunction: true}).body[0]
 }
 
 const rpcTest = async () => {
@@ -52,7 +52,7 @@ const rpcTest = async () => {
           }
         })
 
-        const newCode = generate(ast).replace(/ async /g, ' ')
+        const newCode = generate(ast)
         console.log(newCode)
         return newCode
       }
