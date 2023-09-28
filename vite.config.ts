@@ -54,7 +54,10 @@ const rpcTest = async () => {
 
         const newCode = generate(ast)
         console.log(newCode)
-        return newCode
+        return {
+          code: newCode,
+          map: { mappings: '' }
+        }
       }
     },
     configureServer: function(server) {
