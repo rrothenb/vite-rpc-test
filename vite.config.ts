@@ -5,7 +5,7 @@ import ts from "typescript"
 import { generate } from 'astring'
 import {simple} from 'acorn-walk'
 
-const serverRoutes = {}
+const apiRoutes = {}
 
 const buildExpressionAst = (name, basePath, serverRoutes, parse) => {
   const fullPath = `${basePath}/${name}`
@@ -18,17 +18,15 @@ const rpcTest = async () => {
   return {
     name: 'rpc test',
     transform: async function (code, id) {
-      if (id.includes('/server/')) {
+      if (id.startsWith(__dirname+'/src/server/')) {
         const urlPath = id.replace(/^.*server/, '').replace(/\.ts$/, '')
         const importPath = `./.rpc/build${urlPath}.js`
-        console.log({importPath, urlPath, id})
         const ast = this.parse(code)
         const module = await import(importPath)
         const exportedAsyncFunctions = Object.keys(module).filter((endpoint) => module[endpoint].constructor.name === 'AsyncFunction')
         exportedAsyncFunctions.forEach(exportedFunc => {
-          serverRoutes[`${urlPath}/${exportedFunc}`] = module[exportedFunc]
+          apiRoutes[`${urlPath}/${exportedFunc}`] = module[exportedFunc]
         })
-        console.log(serverRoutes)
         ast.body = ast.body.filter(statement => {
           if (statement.type === 'ExportNamedDeclaration') {
             if (statement.declaration.type === 'VariableDeclaration') {
@@ -45,15 +43,14 @@ const rpcTest = async () => {
         simple(ast, {
           VariableDeclarator(node) {
             node.init.expression = false
-            node.init.body = buildExpressionAst(node.id.name, urlPath, serverRoutes, parse)
+            node.init.body = buildExpressionAst(node.id.name, urlPath, apiRoutes, parse)
           },
           FunctionDeclaration(node) {
-            node.body = buildExpressionAst(node.id.name, urlPath, serverRoutes, parse)
+            node.body = buildExpressionAst(node.id.name, urlPath, apiRoutes, parse)
           }
         })
 
         const newCode = generate(ast)
-        console.log(newCode)
         return {
           code: newCode,
           map: { mappings: '' }
@@ -62,8 +59,7 @@ const rpcTest = async () => {
     },
     configureServer: function(server) {
       server.middlewares.use('/server', function (req, res) {
-        console.log('server hit', req.url, req.method)
-        if (serverRoutes[req.url]) {
+        if (apiRoutes[req.url]) {
           const body = [];
           req
               .on('data', chunk => {
@@ -71,9 +67,7 @@ const rpcTest = async () => {
               })
               .on('end', async () => {
                 const payload = JSON.parse(Buffer.concat(body).toString());
-                console.log(payload)
-                const result = JSON.stringify(await serverRoutes[req.url](...payload))
-                console.log(result)
+                const result = JSON.stringify(await apiRoutes[req.url](...payload))
                 res.end(result)
               });
         }
