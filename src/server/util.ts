@@ -1,7 +1,9 @@
 import {something} from "./other";
 
 export const secret = async (message: string): Promise<string> => {
-    console.log({message})
+    const constant = 1
+    const functor = () => true
+    console.log({message, constant, functor})
     something()
     return `${message}!`
 }
